@@ -1,0 +1,25 @@
+{
+  "name": "mcp-simple-server",
+  "version": "1.0.0",
+  "description": "A simple MCP server with echo, add, and timestamp tools",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-simple-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["mcp", "server", "smithery"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
