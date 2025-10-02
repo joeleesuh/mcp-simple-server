@@ -61,7 +61,27 @@ Returns the current timestamp in ISO 8601 format.
 
 **Arguments:** None
 
-## Deployment to smithery.ai
+## Deployment
+
+### AWS EC2 Deployment
+
+Deploy to AWS EC2 with automated setup using AWS CloudShell. See [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md) for detailed instructions.
+
+**Quick Start:**
+```bash
+# From AWS CloudShell
+curl -O https://raw.githubusercontent.com/joeleesuh/mcp-simple-server/main/scripts/deploy-to-ec2.sh
+chmod +x deploy-to-ec2.sh
+./deploy-to-ec2.sh
+```
+
+Includes:
+- Automated EC2 instance provisioning (t3.micro - Free Tier eligible)
+- Auto-install Node.js and dependencies
+- Systemd service setup
+- AWS Session Manager access (no SSH keys required)
+
+### Deployment to smithery.ai
 
 This project is configured for deployment on Smithery.ai with:
 - `Dockerfile` - Multi-stage Docker build for optimized container image
@@ -133,14 +153,18 @@ Or if testing locally:
 ```
 mcp-simple-server/
 ├── src/
-│   └── index.ts          # Main server implementation
-├── dist/                 # Compiled JavaScript (generated)
-├── Dockerfile            # Docker container configuration
-├── smithery.yaml         # Smithery deployment configuration
-├── .dockerignore         # Docker build exclusions
-├── package.json          # Dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-└── README.md            # This file
+│   └── index.ts              # Main server implementation
+├── scripts/
+│   ├── deploy-to-ec2.sh      # AWS CloudShell deployment script
+│   └── user-data.sh          # EC2 instance initialization script
+├── dist/                     # Compiled JavaScript (generated)
+├── Dockerfile                # Docker container configuration
+├── smithery.yaml             # Smithery deployment configuration
+├── .dockerignore             # Docker build exclusions
+├── package.json              # Dependencies and scripts
+├── tsconfig.json             # TypeScript configuration
+├── README.md                # This file
+└── AWS_DEPLOYMENT.md        # AWS EC2 deployment guide
 ```
 
 ### Adding New Tools
