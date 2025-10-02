@@ -6,10 +6,21 @@ This guide walks you through deploying `mcp-server-joeleesuh` to AWS EC2 using A
 
 This deployment will:
 - Launch an EC2 instance (t3.micro - Free Tier eligible)
-- Auto-install Node.js 20.x
+- Auto-install Node.js 20.x with Express and WebSocket support
 - Clone and build the MCP server from GitHub
-- Set up the server as a systemd service
+- Set up the server as a systemd service running in HTTP mode on port 3000
+- Configure security group to allow inbound HTTP/WebSocket traffic on port 3000
 - Configure AWS Session Manager for secure access (no SSH keys required)
+
+## Server Modes
+
+The MCP server supports two modes:
+- **stdio mode**: For local development and traditional MCP client connections
+- **HTTP mode** (default on EC2): Exposes HTTP REST API and WebSocket endpoints on port 3000
+
+The EC2 deployment uses HTTP mode by default, allowing you to interact with the server via:
+- HTTP REST endpoints for health checks and server info
+- WebSocket connections for MCP protocol communication
 
 ## Prerequisites
 
@@ -48,7 +59,7 @@ Create a file named `user-data.sh` with the EC2 initialization script (see `scri
 # Create security group
 SG_ID=$(aws ec2 create-security-group \
   --group-name mcp-server-joeleesuh-sg \
-  --description "Security group for MCP Server - no inbound ports needed (uses SSM)" \
+  --description "Security group for MCP Server with HTTP/WebSocket on port 3000" \
   --query 'GroupId' \
   --output text)
 
@@ -58,6 +69,14 @@ echo "Security Group ID: $SG_ID"
 aws ec2 create-tags \
   --resources $SG_ID \
   --tags Key=Name,Value=mcp-server-joeleesuh-sg
+
+# Add inbound rule for port 3000 (HTTP/WebSocket)
+aws ec2 authorize-security-group-ingress \
+  --group-id $SG_ID \
+  --protocol tcp \
+  --port 3000 \
+  --cidr 0.0.0.0/0 \
+  --group-rule-description "MCP Server HTTP/WebSocket"
 ```
 
 #### Step 3: Launch EC2 Instance
@@ -182,31 +201,62 @@ sudo systemctl restart mcp-server-joeleesuh
 
 ## Usage with MCP Clients
 
-Since this MCP server uses stdio transport, you'll typically use it locally rather than connecting to the EC2 instance remotely. However, if you want to use it from the EC2 instance:
+The EC2 deployment runs in HTTP mode, exposing both HTTP REST endpoints and WebSocket connections.
 
-### Connect via SSM and Use Locally
+### HTTP Endpoints
+
+Once deployed, you can interact with the server via HTTP:
 
 ```bash
-# Connect to instance
-aws ssm start-session --target $INSTANCE_ID
+# Get public IP from deployment output, then:
 
-# Run the server
-node /opt/mcp-server-joeleesuh/dist/index.js
+# Health check
+curl http://<PUBLIC_IP>:3000/health
+
+# Server info and available tools
+curl http://<PUBLIC_IP>:3000/
+
+# Example response:
+# {
+#   "name": "mcp-server-joeleesuh",
+#   "version": "1.0.0",
+#   "description": "MCP server with echo, add, and timestamp tools",
+#   "websocket": "ws://<PUBLIC_IP>:3000/",
+#   "tools": [...]
+# }
 ```
 
-### Use as a Testing/Development Server
+### WebSocket Connection
 
-You can use the EC2 instance as a development environment:
+Connect MCP clients to the WebSocket endpoint:
+
+```
+ws://<PUBLIC_IP>:3000/
+```
+
+### Local stdio Mode
+
+To run the server locally in stdio mode:
 
 ```bash
-# Connect via SSM
+# Connect to instance via SSM
 aws ssm start-session --target $INSTANCE_ID
 
-# Navigate to the project
-cd /opt/mcp-server-joeleesuh
+# Stop the HTTP service
+sudo systemctl stop mcp-server-joeleesuh
 
-# Make changes and test
-# The systemd service will keep it running in the background
+# Run in stdio mode
+MCP_MODE=stdio node /opt/mcp-server-joeleesuh/dist/index.js
+```
+
+### Testing WebSocket with wscat
+
+```bash
+# Install wscat if needed
+npm install -g wscat
+
+# Connect to the WebSocket endpoint
+wscat -c ws://<PUBLIC_IP>:3000/
 ```
 
 ## Cost Optimization

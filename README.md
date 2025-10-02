@@ -2,11 +2,16 @@
 
 A simple Model Context Protocol (MCP) server with three basic tools: echo, add numbers, and get timestamp.
 
+Supports both **stdio** and **HTTP/WebSocket** transport modes for flexible deployment options.
+
 ## Features
 
 - **echo**: Echoes back any message you provide
 - **add**: Adds two numbers together
 - **get_timestamp**: Returns the current timestamp in ISO 8601 format
+- **Dual Mode Support**: Run in stdio mode (local) or HTTP/WebSocket mode (remote)
+- **HTTP REST API**: Health checks and server info endpoints
+- **WebSocket Support**: Real-time MCP protocol communication
 
 ## Installation
 
@@ -20,11 +25,26 @@ npm install
 npm run build
 ```
 
-## Local Testing
+## Running the Server
+
+### stdio Mode (Default - Local Development)
 
 ```bash
 npm start
+# or
+MCP_MODE=stdio node dist/index.js
 ```
+
+### HTTP/WebSocket Mode (Remote Access)
+
+```bash
+MCP_MODE=http PORT=3000 node dist/index.js
+```
+
+Once running in HTTP mode, access:
+- Health check: `http://localhost:3000/health`
+- Server info: `http://localhost:3000/`
+- WebSocket: `ws://localhost:3000/`
 
 ## Tools
 
@@ -78,8 +98,15 @@ chmod +x deploy-to-ec2.sh
 Includes:
 - Automated EC2 instance provisioning (t3.micro - Free Tier eligible)
 - Auto-install Node.js and dependencies
-- Systemd service setup
+- **Runs in HTTP mode** on port 3000 with WebSocket support
+- Security group configured for port 3000 access
+- Systemd service setup with environment variables
 - AWS Session Manager access (no SSH keys required)
+
+After deployment, access the server at:
+- `http://<PUBLIC_IP>:3000/health` - Health check
+- `http://<PUBLIC_IP>:3000/` - Server info
+- `ws://<PUBLIC_IP>:3000/` - WebSocket endpoint
 
 ### Deployment to smithery.ai
 

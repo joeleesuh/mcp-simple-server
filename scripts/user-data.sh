@@ -56,6 +56,8 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/mcp-server-joeleesuh
+Environment="MCP_MODE=http"
+Environment="PORT=3000"
 ExecStart=/usr/bin/node /opt/mcp-server-joeleesuh/dist/index.js
 Restart=always
 RestartSec=10

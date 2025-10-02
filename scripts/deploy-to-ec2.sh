@@ -61,6 +61,8 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/mcp-server-joeleesuh
+Environment="MCP_MODE=http"
+Environment="PORT=3000"
 ExecStart=/usr/bin/node /opt/mcp-server-joeleesuh/dist/index.js
 Restart=always
 RestartSec=10
@@ -87,7 +89,7 @@ if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
     echo "Creating new security group: $SG_NAME"
     SG_ID=$(aws ec2 create-security-group \
         --group-name "$SG_NAME" \
-        --description "Security group for MCP Server - no inbound ports (uses SSM)" \
+        --description "Security group for MCP Server with HTTP/WebSocket on port 3000" \
         --query 'GroupId' \
         --output text)
 
@@ -95,9 +97,36 @@ if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
         --resources "$SG_ID" \
         --tags Key=Name,Value="$SG_NAME"
 
+    # Add inbound rule for port 3000 (HTTP/WebSocket)
+    echo "Adding inbound rule for port 3000..."
+    aws ec2 authorize-security-group-ingress \
+        --group-id "$SG_ID" \
+        --protocol tcp \
+        --port 3000 \
+        --cidr 0.0.0.0/0 \
+        --group-rule-description "MCP Server HTTP/WebSocket"
+
     echo "Created security group: $SG_ID"
 else
     echo "Using existing security group: $SG_ID"
+
+    # Check if port 3000 rule exists, add if not
+    RULE_EXISTS=$(aws ec2 describe-security-group-rules \
+        --filters "Name=group-id,Values=$SG_ID" \
+        --query "SecurityGroupRules[?FromPort==\`3000\` && ToPort==\`3000\`].GroupRuleId" \
+        --output text 2>/dev/null || echo "")
+
+    if [ -z "$RULE_EXISTS" ]; then
+        echo "Adding inbound rule for port 3000 to existing security group..."
+        aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --protocol tcp \
+            --port 3000 \
+            --cidr 0.0.0.0/0 \
+            --group-rule-description "MCP Server HTTP/WebSocket" 2>/dev/null || echo "Rule may already exist"
+    else
+        echo "Port 3000 rule already exists"
+    fi
 fi
 
 # Step 3: Verify IAM instance profile exists
@@ -195,17 +224,29 @@ echo "Private IP:      $PRIVATE_IP"
 echo "Security Group:  $SG_ID"
 echo "Region:          $REGION"
 echo ""
+echo "HTTP Endpoints:"
+echo "---------------"
+echo "Health Check:    http://$PUBLIC_IP:3000/health"
+echo "Server Info:     http://$PUBLIC_IP:3000/"
+echo "WebSocket:       ws://$PUBLIC_IP:3000/"
+echo ""
 echo "Next Steps:"
 echo "------------"
 echo "1. Wait 2-3 minutes for the server to finish installing"
 echo ""
-echo "2. Connect to the instance:"
+echo "2. Test the HTTP endpoint:"
+echo "   curl http://$PUBLIC_IP:3000/health"
+echo ""
+echo "3. View server info:"
+echo "   curl http://$PUBLIC_IP:3000/"
+echo ""
+echo "4. Connect to the instance via SSM:"
 echo "   aws ssm start-session --target $INSTANCE_ID"
 echo ""
-echo "3. Check service status:"
+echo "5. Check service status:"
 echo "   sudo systemctl status mcp-server-joeleesuh"
 echo ""
-echo "4. View logs:"
+echo "6. View logs:"
 echo "   sudo journalctl -u mcp-server-joeleesuh -f"
 echo ""
 echo "5. View installation logs:"
