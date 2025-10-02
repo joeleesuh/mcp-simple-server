@@ -2,15 +2,15 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { WebSocketServerTransport } from "@modelcontextprotocol/sdk/server/websocket.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
+import { Duplex } from "stream";
 
 // Configuration
 const MODE = process.env.MCP_MODE || "stdio"; // "stdio" or "http"
@@ -151,6 +151,57 @@ function createMCPServer() {
   return server;
 }
 
+// Create a Duplex stream that bridges WebSocket and stdio transport
+class WebSocketStream extends Duplex {
+  private ws: WebSocket;
+
+  constructor(ws: WebSocket) {
+    super();
+    this.ws = ws;
+
+    // When WebSocket receives a message, push it to the readable side
+    this.ws.on("message", (data: Buffer) => {
+      this.push(data);
+    });
+
+    // When WebSocket closes, end the stream
+    this.ws.on("close", () => {
+      this.push(null);
+    });
+
+    // Handle WebSocket errors
+    this.ws.on("error", (error) => {
+      this.destroy(error);
+    });
+  }
+
+  // Implement the _read method (required by Readable)
+  _read() {
+    // No-op: data is pushed when WebSocket receives messages
+  }
+
+  // Implement the _write method (required by Writable)
+  _write(
+    chunk: Buffer,
+    encoding: BufferEncoding,
+    callback: (error?: Error | null) => void
+  ) {
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(chunk, callback);
+    } else {
+      callback(new Error("WebSocket is not open"));
+    }
+  }
+
+  // Clean up when the stream is destroyed
+  _destroy(error: Error | null, callback: (error: Error | null) => void) {
+    if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+      this.ws.close();
+    }
+    callback(error);
+  }
+}
+
 // Start server in stdio mode
 async function startStdioMode() {
   const server = createMCPServer();
@@ -176,7 +227,7 @@ async function startHttpMode() {
       name: "mcp-server-joeleesuh",
       version: "1.0.0",
       description: "MCP server with echo, add, and timestamp tools",
-      websocket: "ws://" + req.headers.host + "/mcp",
+      websocket: "ws://" + req.headers.host + "/",
       tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
     });
   });
@@ -185,15 +236,25 @@ async function startHttpMode() {
   wss.on("connection", async (ws) => {
     console.error("New WebSocket connection established");
 
-    const server = createMCPServer();
-    const transport = new WebSocketServerTransport(ws);
-
     try {
+      // Create a new MCP server instance for this connection
+      const server = createMCPServer();
+
+      // Create a duplex stream that bridges the WebSocket
+      const stream = new WebSocketStream(ws);
+
+      // Create a transport using the custom stream
+      // We pass the stream as both input and output
+      const transport = new StdioServerTransport(stream as any, stream as any);
+
+      // Connect the server to the transport
       await server.connect(transport);
       console.error("MCP server connected via WebSocket");
     } catch (error) {
       console.error("Error connecting MCP server:", error);
-      ws.close();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
     }
 
     ws.on("close", () => {
