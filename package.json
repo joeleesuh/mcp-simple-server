@@ -1,11 +1,11 @@
 {
-  "name": "mcp-simple-server",
+  "name": "mcp-server-joeleesuh",
   "version": "1.0.0",
   "description": "A simple MCP server with echo, add, and timestamp tools",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-simple-server": "dist/index.js"
+    "mcp-server-joeleesuh": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
