@@ -63,44 +63,40 @@ Returns the current timestamp in ISO 8601 format.
 
 ## Deployment to smithery.ai
 
+This project is configured for deployment on Smithery.ai with:
+- `Dockerfile` - Multi-stage Docker build for optimized container image
+- `smithery.yaml` - Smithery configuration for stdio-based MCP server
+- `.dockerignore` - Excludes unnecessary files from Docker build
+
 ### Prerequisites
 
 1. Create a GitHub repository for this project
-2. Push your code to GitHub
+2. Push your code to GitHub (including Dockerfile and smithery.yaml)
 3. Create an account on [smithery.ai](https://smithery.ai)
+4. (Optional) Test Docker build locally: `docker build -t mcp-simple-server .`
 
 ### Steps to Deploy
 
-1. **Initialize Git Repository** (if not already done):
+1. **Push to GitHub** (if not already done):
    ```bash
-   git init
    git add .
-   git commit -m "Initial commit: MCP Simple Server"
+   git commit -m "Add Smithery deployment configuration"
+   git push
    ```
 
-2. **Push to GitHub**:
-   ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/mcp-simple-server.git
-   git branch -M main
-   git push -u origin main
-   ```
-
-3. **Deploy on smithery.ai**:
+2. **Deploy on smithery.ai**:
    - Go to [smithery.ai](https://smithery.ai)
    - Sign in with your GitHub account
    - Click "New Server" or "Deploy Server"
    - Connect your GitHub repository
    - Select the `mcp-simple-server` repository
-   - Configure the deployment settings:
-     - **Name**: mcp-simple-server
-     - **Entry Point**: `dist/index.js`
-     - **Build Command**: `npm install && npm run build`
+   - Smithery will automatically detect `Dockerfile` and `smithery.yaml`
    - Click "Deploy"
 
-4. **Use Your Server**:
-   - Once deployed, smithery.ai will provide you with connection details
-   - You can use this server with any MCP client (like Claude Desktop)
-   - Add the server configuration to your MCP client settings
+3. **Use Your Server**:
+   - Once deployed, Smithery will provide installation instructions
+   - You can install it with: `npx @smithery/cli install <your-server-name>`
+   - Or use it directly in Claude Desktop or other MCP clients
 
 ### Example Claude Desktop Configuration
 
@@ -139,6 +135,9 @@ mcp-simple-server/
 ├── src/
 │   └── index.ts          # Main server implementation
 ├── dist/                 # Compiled JavaScript (generated)
+├── Dockerfile            # Docker container configuration
+├── smithery.yaml         # Smithery deployment configuration
+├── .dockerignore         # Docker build exclusions
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
 └── README.md            # This file
