@@ -349,7 +349,6 @@ For a containerized approach, see the `Dockerfile` in the repository. You can:
 3. Use ECS/Fargate for a fully managed container deployment
 
 ## References
-
 - [AWS EC2 Documentation](https://docs.aws.amazon.com/ec2/)
 - [AWS Systems Manager Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html)
 - [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
